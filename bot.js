@@ -1,4 +1,3 @@
-
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -7,13 +6,12 @@ const whois = require('whois-json');
 const exifParser = require('exif-parser');
 
 // ==================== SABİT ÇEREZLER VE AYARLAR ====================
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+
 const APEX_SESSION_ID = 'a37ebc4b724bbee56535b760527557b0';
 const RUH_COOKIE_STRING = 'RUHSID=719ff939cffd042f3220a985a3c4e2cb; cf_clearance=gpSabjl8fkNYXB4YxeFsRfo.jRc7me3TyTAwotPVf7A-1787060256-1.2.1.1-A0SO0v3_.8peL9b7AUeEKVslCk7hbVOf48cDOPq7xrHF8qlVh8pJ30Vnst2PybOy2woGohfh4Q_cSwaOu1X6rtwKZMz6bKzYwzFlmRbErPgINm2KNmdCktlN0_xhbk.sOQCwp.SrtbLrBxj3geb31XXYRQ8UW1QyxesTNap2Kg0ALkZHxVr4VrguxtYO9uxQz.d9pOaE8d9Y29DPS0nY9Z8PrX.aFm963xEbIpxeSlXmbmPT5pl00rCmYsggqtu.4CJ.uyE0s_BYlTguLzzEBHQV7ueUyK32pDl3QA9B2Fp2angx5huKzYnaoTCVpQJMHsNWyNYUT49AzPGKIpphYdaAWRjJW9JaEZMrea4pGx2kZySyDu4Oa9T8Nt4iQg.WCpYT.N6kiqQIpmnjPHrDL_k9CE3Et0q0DC.6CLK89AV.I7rUleMFXj_tmybxpnNKEyCUsaOputyTYSuuJ.BsYg';
 // ===================================================================
-
-// Sadece hassas olması gereken Telegram Token ve Webhook URL secret (.env) üzerinden alınır
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 const bot = new TelegramBot(TOKEN, { webHook: true });
 const app = express();
