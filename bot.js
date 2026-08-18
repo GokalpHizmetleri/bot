@@ -6,7 +6,13 @@ const FormData = require('form-data');
 const whois = require('whois-json');
 const exifParser = require('exif-parser');
 
-const TOKEN = process.env.TELEGRAM_TOKEN;
+// ==================== SABİT ÇEREZLER VE AYARLAR ====================
+const APEX_SESSION_ID = 'a37ebc4b724bbee56535b760527557b0';
+const RUH_COOKIE_STRING = 'RUHSID=719ff939cffd042f3220a985a3c4e2cb; cf_clearance=gpSabjl8fkNYXB4YxeFsRfo.jRc7me3TyTAwotPVf7A-1787060256-1.2.1.1-A0SO0v3_.8peL9b7AUeEKVslCk7hbVOf48cDOPq7xrHF8qlVh8pJ30Vnst2PybOy2woGohfh4Q_cSwaOu1X6rtwKZMz6bKzYwzFlmRbErPgINm2KNmdCktlN0_xhbk.sOQCwp.SrtbLrBxj3geb31XXYRQ8UW1QyxesTNap2Kg0ALkZHxVr4VrguxtYO9uxQz.d9pOaE8d9Y29DPS0nY9Z8PrX.aFm963xEbIpxeSlXmbmPT5pl00rCmYsggqtu.4CJ.uyE0s_BYlTguLzzEBHQV7ueUyK32pDl3QA9B2Fp2angx5huKzYnaoTCVpQJMHsNWyNYUT49AzPGKIpphYdaAWRjJW9JaEZMrea4pGx2kZySyDu4Oa9T8Nt4iQg.WCpYT.N6kiqQIpmnjPHrDL_k9CE3Et0q0DC.6CLK89AV.I7rUleMFXj_tmybxpnNKEyCUsaOputyTYSuuJ.BsYg';
+// ===================================================================
+
+// Sadece hassas olması gereken Telegram Token ve Webhook URL secret (.env) üzerinden alınır
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 const bot = new TelegramBot(TOKEN, { webHook: true });
@@ -19,7 +25,7 @@ app.post('/bot-webhook', (req, res) => {
     res.sendStatus(200);
 });
 
-// ApexCodex İstek Fonksiyonu (.env'den çerezleri alır)
+// ApexCodex İstek Fonksiyonu
 async function callApexCodex(action, params) {
     const form = new FormData();
     form.append('action', action);
@@ -30,7 +36,7 @@ async function callApexCodex(action, params) {
         const response = await axios.post('https://apexcodex.alwaysdata.net/', form, {
             headers: {
                 ...form.getHeaders(),
-                'Cookie': `PHPSESSID=${process.env.APEX_SESS}`,
+                'Cookie': `PHPSESSID=${APEX_SESSION_ID}`,
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
         });
@@ -40,12 +46,12 @@ async function callApexCodex(action, params) {
     }
 }
 
-// RuhsuzPanel İstek Fonksiyonu (.env'den çerezleri alır)
+// RuhsuzPanel İstek Fonksiyonu
 async function callRuhsuzPanel(endpoint, dataObj) {
     const url = `https://ruhsuzpanel8.site/${endpoint}`;
     const headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': process.env.RUH_SESS,
+        'Cookie': RUH_COOKIE_STRING,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     };
     try {
@@ -60,7 +66,7 @@ async function callRuhsuzPanel(endpoint, dataObj) {
 
 bot.onText(/\/start/, (msg) => {
     bot.sendMessage(msg.chat.id, 
-        "GHPanel OSINT Bot (.env Aktif) 🚀\n\n" +
+        "GHPanel OSINT Bot Aktif 🚀\n\n" +
         "Komutlar:\n" +
         "/tc <tc_no> - TC Kimlik Sorgu\n" +
         "/gsm <telefon> - GSM Sorgu\n" +
