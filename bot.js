@@ -4,12 +4,12 @@ const axios = require('axios');
 const whois = require('whois-json');
 const exifParser = require('exif-parser');
 
-// ==================== RUHSUZPANEL GÜNCEL ÇEREZ VE AYARLAR ====================
-const TOKEN = process.env.TELEGRAM_TOKEN;
+// ==================== ENVIRONMENT VARIABLES (SECRET) ====================
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 const RUH_COOKIE_STRING = 'RUHSID=2ab3c4e530074364e35991cca00d5c7b; cf_clearance=Sv3OeYBYrF0s6mqveRLRMoSn2dD8K4zvBht2L2WJwYo-1787066409-1.2.1.1-FM55vL69XUvKvz8.ARHpRXMGeiGGFU5ycPku4LavZYG3aQrFxw.0u8fa_U4W1N2MgBDrgTEkXHiIY1M3nuzYrr0i5AufojBGv4EGafCfVm1U7y.Pu5F7QPC10cl2PGGP5PHzHeyO0BccscGCcgaEMksfV2vwgHS3LFS4X4jmkMfITXeeL.uZ0T5ycbTrYTHdKB7oHQMEhnsqiKoZOzWO0EQRZun9I031rveppUuyDXtoFp6xWnbaLKXmwX6bRiNM_C9kH98cLBmbOSE5NiPwVeGdLZN7FWAVmGbrwXWm0OHyHjunrMB0qo73kK7A0kuYn6CdhgoT_azPMPCChaBs_fgTr1GaTDKk_MdYS6PQzlPaw_zpoIcviXU01v81ZClsV5huFNnF_q40GUOS1VAC.ECFP9O9nYnfEQ6kNy5V06egF4_r3jLT5.stz6.v5z4yku.a5j1BfAVsWJMrTsYxgA; twk_idm_key=7TT_ibQEdt3sK8rmHDFt-';
-// ============================================================================
+// ========================================================================
 
 const bot = new TelegramBot(TOKEN, { webHook: true });
 const app = express();
@@ -44,7 +44,7 @@ async function callRuhsuzPanel(endpoint, dataObj) {
 
 bot.onText(/\/start/, (msg) => {
     bot.sendMessage(msg.chat.id, 
-        "GHPanel OSINT Bot (Aktif Modüller) 🚀\n\n" +
+        "GHPanel OSINT Bot Aktif 🚀\n\n" +
         "Komutlar:\n" +
         "/adsoyad <ad> <soyad> - Ad Soyad ile Sorgula (Örn: /adsoyad Gökalp İkiz)\n" +
         "/gsm <telefon> - GSM ile Sorgula\n" +
@@ -55,7 +55,7 @@ bot.onText(/\/start/, (msg) => {
     );
 });
 
-// 1. Yeni Ad Soyad Sorgu Modülü (/adsoyad.php)
+// 1. Ad Soyad Sorgu Modülü (/adsoyad.php)
 bot.onText(/\/adsoyad (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const args = match[1].split(' ');
@@ -64,7 +64,7 @@ bot.onText(/\/adsoyad (.+)/, async (msg, match) => {
         return;
     }
     const ad = args[0];
-    const soyad = args.slice(1).join(' '); // Birden fazla soyadı ihtimaline karşı
+    const soyad = args.slice(1).join(' ');
 
     bot.sendMessage(chatId, `Sorgulanıyor (Ad Soyad): ${ad} ${soyad}...`);
     const result = await callRuhsuzPanel('adsoyad.php', { ad: ad, soyad: soyad });
