@@ -152,4 +152,3 @@ app.listen(PORT, async () => {
     console.log(`Bot ${PORT} portunda çalışıyor.`);
     await bot.setWebHook(WEBHOOK_URL);
 });
-
