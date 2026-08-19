@@ -3,11 +3,10 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const whois = require('whois-json');
 const exifParser = require('exif-parser');
+const puppeteer = require('puppeteer');
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-
-const RUH_COOKIE_STRING = 'RUHSID=2ab3c4e530074364e35991cca00d5c7b; cf_clearance=Sv3OeYBYrF0s6mqveRLRMoSn2dD8K4zvBht2L2WJwYo-1787066409-1.2.1.1-FM55vL69XUvKvz8.ARHpRXMGeiGGFU5ycPku4LavZYG3aQrFxw.0u8fa_U4W1N2MgBDrgTEkXHiIY1M3nuzYrr0i5AufojBGv4EGafCfVm1U7y.Pu5F7QPC10cl2PGGP5PHzHeyO0BccscGCcgaEMksfV2vwgHS3LFS4X4jmkMfITXeeL.uZ0T5ycbTrYTHdKB7oHQMEhnsqiKoZOzWO0EQRZun9I031rveppUuyDXtoFp6xWnbaLKXmwX6bRiNM_C9kH98cLBmbOSE5NiPwVeGdLZN7FWAVmGbrwXWm0OHyHjunrMB0qo73kK7A0kuYn6CdhgoT_azPMPCChaBs_fgTr1GaTDKk_MdYS6PQzlPaw_zpoIcviXU01v81ZClsV5huFNnF_q40GUOS1VAC.ECFP9O9nYnfEQ6kNy5V06egF4_r3jLT5.stz6.v5z4yku.a5j1BfAVsWJMrTsYxgA; twk_idm_key=7TT_ibQEdt3sK8rmHDFt-';
 
 const bot = new TelegramBot(TOKEN, { webHook: true });
 const app = express();
@@ -19,18 +18,58 @@ app.post('/bot-webhook', (req, res) => {
     res.sendStatus(200);
 });
 
-// RuhsuzPanel İstek Fonksiyonu
+// ==================== OTOMATİK ÇEREZ TOPLAYICI ====================
+async function getAutoCookies() {
+    try {
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ]
+        });
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
+        
+        // Panele gidip güncel çerezleri yakalıyoruz
+        await page.goto('https://ruhsuzpanel8.site/adsoyad.php', { waitUntil: 'networkidle2', timeout: 30000 });
+        
+        const cookies = await page.cookies();
+        await browser.close();
+
+        let cookieString = '';
+        cookies.forEach(c => {
+            cookieString += `${c.name}=${c.value}; `;
+        });
+
+        return cookieString;
+    } catch (error) {
+        console.error("Otomatik çerez toplama hatası:", error.message);
+        return '';
+    }
+}
+// ==================================================================
+
+// RuhsuzPanel İstek Fonksiyonu (Otomatik taze çerezle çalışır)
 async function callRuhsuzPanel(endpoint, dataObj) {
+    const dynamicCookies = await getAutoCookies();
     const url = `https://ruhsuzpanel8.site/${endpoint}`;
+    
     const headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': RUH_COOKIE_STRING,
+        'Cookie': dynamicCookies,
         'Origin': 'https://ruhsuzpanel8.site',
         'Referer': `https://ruhsuzpanel8.site/${endpoint}`,
         'X-Requested-With': 'XMLHttpRequest',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
     };
+    
     try {
         const response = await axios.post(url, new URLSearchParams(dataObj).toString(), { headers });
         return { success: true, data: response.data };
@@ -47,9 +86,9 @@ async function callRuhsuzPanel(endpoint, dataObj) {
 // Telegram Komutları
 bot.onText(/\/start/, (msg) => {
     bot.sendMessage(msg.chat.id, 
-        "GHPanel OSINT Bot Aktif 🚀\n\n" +
+        "GHPanel OSINT Bot (Tam Otomatik) 🚀\n\n" +
         "Komutlar:\n" +
-        "/adsoyad <İsim> <Soyisim> - Ad Soyad Sorgula (Örn: /adsoyad Ahmet Emin Yılmaz)\n" +
+        "/adsoyad <İsim(ler)> <Soyisim> - Ad Soyad Sorgula\n" +
         "/gsm <telefon> - GSM Sorgula\n" +
         "/hane <tc_no> - Hane Sorgula\n" +
         "/whois <domain> - Whois Sorgusu\n" +
@@ -59,20 +98,20 @@ bot.onText(/\/start/, (msg) => {
     );
 });
 
-// Ad Soyad (2 isimli veya çok kelimeli yapıları destekler)
+// Ad Soyad (İki isimli yapıları otomatik çözer: Son kelime soyad, öncekiler ad)
 bot.onText(/\/adsoyad (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const args = match[1].trim().split(/\s+/);
     
     if (args.length < 2) {
-        bot.sendMessage(chatId, "Lütfen en az bir isim ve bir soyisim girin.\nÖrnek: `/adsoyad Ahmet Emin Yılmaz`", { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, "Lütfen en az bir isim ve bir soyisim girin.\nÖrnek: `/adsoyad Onur Mert Bulak`", { parse_mode: 'Markdown' });
         return;
     }
 
-    const ad = args[0];
-    const soyad = args.slice(1).join(' ');
+    const soyad = args[args.length - 1];
+    const ad = args.slice(0, args.length - 1).join(' ');
 
-    bot.sendMessage(chatId, `Sorgulanıyor: ${ad} ${soyad}...`);
+    bot.sendMessage(chatId, `Çerezler otomatik toplanıp sorgulanıyor -> Ad: *${ad}* | Soyad: *${soyad}*...`, { parse_mode: 'Markdown' });
     const res = await callRuhsuzPanel('adsoyad.php', { ad: ad, soyad: soyad });
     
     if (res.success) {
@@ -84,7 +123,7 @@ bot.onText(/\/adsoyad (.+)/, async (msg, match) => {
 
 bot.onText(/\/gsm (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Sorgulanıyor...`);
+    bot.sendMessage(chatId, `Çerezler toplanıp sorgulanıyor...`);
     const res = await callRuhsuzPanel('gsm.php', { gsm: match[1] });
     
     if (res.success) {
@@ -96,7 +135,7 @@ bot.onText(/\/gsm (.+)/, async (msg, match) => {
 
 bot.onText(/\/hane (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Sorgulanıyor...`);
+    bot.sendMessage(chatId, `Çerezler toplanıp sorgulanıyor...`);
     const res = await callRuhsuzPanel('hane.php', { tc: match[1], limit: 50, offset: 0 });
     
     if (res.success) {
@@ -117,7 +156,7 @@ bot.onText(/\/whois (.+)/, async (msg, match) => {
     }
 });
 
-// QR Kod Üretici (Yazılan metni veya linki doğrudan QR görsele çevirip atar)
+// QR Kod Üretici
 bot.onText(/\/qr (.+)/, (msg, match) => {
     const chatId = msg.chat.id;
     const text = match[1].trim();
@@ -129,7 +168,7 @@ bot.onText(/\/qr (.+)/, (msg, match) => {
     });
 });
 
-// Base64 Şifreleme ve Çözme Aracı
+// Base64 Şifreleme / Çözme
 bot.onText(/\/base64 (encode|decode) (.+)/i, (msg, match) => {
     const chatId = msg.chat.id;
     const action = match[1].toLowerCase();
