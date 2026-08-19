@@ -1,4 +1,3 @@
-
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -50,11 +49,12 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(msg.chat.id, 
         "GHPanel OSINT Bot Aktif 🚀\n\n" +
         "Komutlar:\n" +
-        "/adsoyad <İsim> <Soyisim> - Ad Soyad Sorgula (2 isimli kişiler için: /adsoyad Ahmet Emin Yılmaz)\n" +
+        "/adsoyad <İsim> <Soyisim> - Ad Soyad Sorgula (Örn: /adsoyad Ahmet Emin Yılmaz)\n" +
         "/gsm <telefon> - GSM Sorgula\n" +
         "/hane <tc_no> - Hane Sorgula\n" +
         "/whois <domain> - Whois Sorgusu\n" +
-        "/rdap <domain/ip> - RDAP Sorgusu\n" +
+        "/qr <metin_veya_link> - Anında QR Kod Görseli Üret\n" +
+        "/base64 <encode|decode> <metin> - Base64 Şifreleme/Çözme\n" +
         "📁 (Dosya Olarak Gönder): Fotoğrafın EXIF ve GPS meta verilerini analiz eder."
     );
 });
@@ -65,11 +65,10 @@ bot.onText(/\/adsoyad (.+)/, async (msg, match) => {
     const args = match[1].trim().split(/\s+/);
     
     if (args.length < 2) {
-        bot.sendMessage(chatId, "Lütfen en az bir isim ve bir soyisim girin.\nÖrnek: `/adsoyad Ahmet Yılmaz` veya `/adsoyad Ahmet Emin Yılmaz`", { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, "Lütfen en az bir isim ve bir soyisim girin.\nÖrnek: `/adsoyad Ahmet Emin Yılmaz`", { parse_mode: 'Markdown' });
         return;
     }
 
-    // İlk kelime ad, geri kalan tüm kelimeler soyad kabul edilir
     const ad = args[0];
     const soyad = args.slice(1).join(' ');
 
@@ -118,20 +117,34 @@ bot.onText(/\/whois (.+)/, async (msg, match) => {
     }
 });
 
-// RDAP Sorgu (Düzeltilmiş ve Güçlendirilmiş)
-bot.onText(/\/rdap (.+)/, async (msg, match) => {
+// QR Kod Üretici (Yazılan metni veya linki doğrudan QR görsele çevirip atar)
+bot.onText(/\/qr (.+)/, (msg, match) => {
     const chatId = msg.chat.id;
-    const query = match[1].trim();
-    bot.sendMessage(chatId, `RDAP sorgulanıyor: ${query}...`);
+    const text = match[1].trim();
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(text)}`;
+    
+    bot.sendPhoto(chatId, qrImageUrl, { 
+        caption: `🔗 **QR Kod Üretildi**\n• İçerik: \`${text}\``, 
+        parse_mode: 'Markdown' 
+    });
+});
+
+// Base64 Şifreleme ve Çözme Aracı
+bot.onText(/\/base64 (encode|decode) (.+)/i, (msg, match) => {
+    const chatId = msg.chat.id;
+    const action = match[1].toLowerCase();
+    const text = match[2];
+
     try {
-        let rdapUrl = `https://rdap.org/domain/${query}`;
-        if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(query)) {
-            rdapUrl = `https://rdap.org/ip/${query}`;
+        let result = '';
+        if (action === 'encode') {
+            result = Buffer.from(text).toString('base64');
+        } else {
+            result = Buffer.from(text, 'base64').toString('utf8');
         }
-        const response = await axios.get(rdapUrl, { timeout: 10000 });
-        bot.sendMessage(chatId, `\`\`\`json\n${JSON.stringify(response.data, null, 2)}\n\`\`\``, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, `Sonuç:\n\`\`\`\n${result}\n\`\`\``, { parse_mode: 'Markdown' });
     } catch (error) {
-        bot.sendMessage(chatId, `RDAP sorgu hatası: ${error.message}`);
+        bot.sendMessage(chatId, `İşlem hatası: ${error.message}`);
     }
 });
 
